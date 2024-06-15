@@ -31,6 +31,9 @@ export class User {
   @Column({ unique: true })
   nickname: string;
 
+  @Column({ default: false })
+  isEmailConsent: boolean;
+
   @Column({ nullable: true })
   profilePicture: string;
 
