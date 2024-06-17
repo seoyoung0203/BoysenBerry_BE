@@ -6,7 +6,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { User } from '../database/entities';
+import { SocialLoginEnum, User } from '../database/entities';
+import axios, { AxiosResponse } from 'axios';
 
 @Injectable()
 export class AuthService {
@@ -63,5 +64,88 @@ export class AuthService {
     } catch (e) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  async googleLogin(user: any): Promise<{ accessToken: string }> {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: user.email },
+    });
+
+    const nickname = user.email.split('@')[0];
+    if (!existingUser) {
+      const newUser = this.userRepository.create({
+        email: user.email,
+        nickname,
+        socialLoginType: SocialLoginEnum.GOOGLE,
+        password: '',
+      });
+      await this.userRepository.save(newUser);
+    }
+
+    const payload = {
+      email: user.email,
+      sub: existingUser?.userId ?? user.email,
+    };
+    const accessToken = this.jwtService.sign(payload);
+    return { accessToken };
+  }
+
+  async gitHubAuth(code: string) {
+    const getTokenUrl: string = 'https://github.com/login/oauth/access_token';
+
+    const request = {
+      code,
+      client_id: process.env.GITHUB_CLIENT_ID,
+      client_secret: process.env.GITHUB_CLIENT_SECRET,
+    };
+
+    const response: AxiosResponse = await axios.post(getTokenUrl, request, {
+      headers: {
+        accept: 'application/json',
+      },
+    });
+
+    if (response.data.error) {
+      throw new UnauthorizedException('fail github login');
+    }
+
+    const { access_token } = response.data;
+
+    const getUserUrl: string = 'https://api.github.com/user';
+    const { data } = await axios.get(getUserUrl, {
+      headers: {
+        Authorization: `token ${access_token}`,
+      },
+      timeout: 3000,
+    });
+
+    const where = data.email
+      ? { email: data.email }
+      : { socialLoginId: data.id };
+
+    const existingUser = await this.userRepository.findOne({
+      where,
+    });
+
+    let userId: number;
+    if (!existingUser) {
+      const nickname = data.email ? data.email.split('@')[0] : data.login;
+      const newUser = this.userRepository.create({
+        email: data.email || '',
+        nickname,
+        socialLoginType: SocialLoginEnum.GITHUB,
+        socialLoginId: data.id,
+        password: '',
+      });
+      const user = await this.userRepository.save(newUser);
+      userId = user.userId;
+    }
+
+    const payload = {
+      sub: existingUser?.userId ?? userId,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+    return { accessToken };
   }
 }

@@ -14,13 +14,15 @@ import { Badge } from './badge.entity';
 import { UserBadge } from './user-badge.entity';
 import { Notification } from './notification.entity';
 
+export enum SocialLoginEnum {
+  GITHUB = 'github',
+  GOOGLE = 'google',
+}
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
   userId: number;
-
-  @Column({ nullable: true })
-  name: string;
 
   @Column({ unique: true })
   email: string;
@@ -42,6 +44,12 @@ export class User {
 
   @Column({ default: 1 })
   level: number;
+
+  @Column({ type: 'enum', enum: SocialLoginEnum, nullable: true })
+  socialLoginType: 'github' | 'google';
+
+  @Column({ nullable: true })
+  socialLoginId: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
