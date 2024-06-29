@@ -27,10 +27,7 @@ export class Answer {
   isAccepted: boolean;
 
   @Column({ default: 0 })
-  upvotes: number;
-
-  @Column({ default: 0 })
-  downvotes: number;
+  approveCount: number;
 
   @Column({ default: true })
   isVisible: boolean;

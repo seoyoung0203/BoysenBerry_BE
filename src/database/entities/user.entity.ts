@@ -1,17 +1,8 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  ManyToMany,
-  JoinTable,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Question } from './question.entity';
 import { Answer } from './answer.entity';
 import { UserProfile } from './user-profile.entity';
 import { Vote } from './vote.entity';
-import { Badge } from './badge.entity';
-import { UserBadge } from './user-badge.entity';
 import { Notification } from './notification.entity';
 
 export enum SocialLoginEnum {
@@ -72,13 +63,6 @@ export class User {
 
   @OneToMany(() => Vote, (vote) => vote.user)
   votes: Vote[];
-
-  @ManyToMany(() => Badge, (badge) => badge.users)
-  @JoinTable()
-  badges: Badge[];
-
-  @OneToMany(() => UserBadge, (userBadge) => userBadge.user)
-  userBadges: UserBadge[];
 
   @OneToMany(() => Notification, (notification) => notification.user)
   notifications: Notification[];

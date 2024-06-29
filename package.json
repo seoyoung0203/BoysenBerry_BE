@@ -33,6 +33,7 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "moment": "^2.30.1",
     "mysql2": "^3.10.1",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",

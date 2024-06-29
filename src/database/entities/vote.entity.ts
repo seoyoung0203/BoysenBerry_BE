@@ -3,6 +3,11 @@ import { User } from './user.entity';
 import { Question } from './question.entity';
 import { Answer } from './answer.entity';
 
+export enum VoteTypeEnum {
+  APPROVE = 'approve',
+  REJECT = 'reject',
+}
+
 @Entity()
 export class Vote {
   @PrimaryGeneratedColumn()
@@ -17,8 +22,8 @@ export class Vote {
   @ManyToOne(() => Answer, (answer) => answer.votes, { nullable: true })
   answer: Answer;
 
-  @Column()
-  isUpvote: boolean;
+  @Column({ type: 'enum', enum: VoteTypeEnum, nullable: true })
+  voteType: 'approve' | 'reject';
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

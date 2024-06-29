@@ -4,14 +4,15 @@ import {
   Column,
   ManyToOne,
   OneToMany,
-  ManyToMany,
-  JoinTable,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Answer } from './answer.entity';
 import { Vote } from './vote.entity';
-import { Tag } from './tag.entity';
-import { QuestionTag } from './question-tag.entity';
+
+export enum QuestionStatus {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+}
 
 @Entity()
 export class Question {
@@ -31,10 +32,13 @@ export class Question {
   viewsCount: number;
 
   @Column({ default: 0 })
-  upvotes: number;
+  approveCount: number;
 
   @Column({ default: 0 })
-  downvotes: number;
+  rejectCount: number;
+
+  @Column({ type: 'enum', enum: QuestionStatus })
+  status: 'draft' | 'published';
 
   @Column({ default: true })
   isVisible: boolean;
@@ -54,11 +58,4 @@ export class Question {
 
   @OneToMany(() => Vote, (vote) => vote.question)
   votes: Vote[];
-
-  @ManyToMany(() => Tag, (tag) => tag.questions)
-  @JoinTable()
-  tags: Tag[];
-
-  @OneToMany(() => QuestionTag, (questionTag) => questionTag.question)
-  questionTags: QuestionTag[];
 }
