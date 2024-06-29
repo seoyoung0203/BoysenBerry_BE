@@ -8,6 +8,11 @@ export enum VoteTypeEnum {
   REJECT = 'reject',
 }
 
+export enum ContentType {
+  QUESTION = 'question',
+  ANSWER = 'answer',
+}
+
 @Entity()
 export class Vote {
   @PrimaryGeneratedColumn()
@@ -21,6 +26,9 @@ export class Vote {
 
   @ManyToOne(() => Answer, (answer) => answer.votes, { nullable: true })
   answer: Answer;
+
+  @Column({ type: 'enum', enum: ContentType, nullable: true })
+  contentType: 'question' | 'answer';
 
   @Column({ type: 'enum', enum: VoteTypeEnum, nullable: true })
   voteType: 'approve' | 'reject';

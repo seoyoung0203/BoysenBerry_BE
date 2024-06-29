@@ -97,6 +97,7 @@ export class QuestionService {
         return {
           answerId: answer.answerId,
           content: answer.body,
+          voteCount: answer.approveCount - answer.rejectCount || 0,
           userNickname: answer.user.nickname,
           userLevel: answer.user.level,
           userProfile: answer.user.profilePicture,
@@ -112,6 +113,7 @@ export class QuestionService {
       userNickname: question.user.nickname,
       userLevel: question.user.level,
       userProfile: question.user.profilePicture,
+      voteCount: question.approveCount - question.rejectCount || 0,
       date: moment(question.createdAt).format('YYYY-DD-MM'),
       answers,
     };

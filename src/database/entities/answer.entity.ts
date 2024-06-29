@@ -29,6 +29,9 @@ export class Answer {
   @Column({ default: 0 })
   approveCount: number;
 
+  @Column({ default: 0 })
+  rejectCount: number;
+
   @Column({ default: true })
   isVisible: boolean;
 
