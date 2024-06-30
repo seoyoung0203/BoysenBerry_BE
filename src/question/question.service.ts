@@ -7,16 +7,25 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import moment from 'moment';
 import {
+  AnswerDto,
   CreateQuestionBodyDto,
   UpdateQuestionBodyDto,
 } from './dto/question.dto';
-import { Question, QuestionStatus, User } from '../database/entities';
+import {
+  Question,
+  QuestionStatus,
+  User,
+  Vote,
+  VoteTypeEnum,
+} from '../database/entities';
 
 @Injectable()
 export class QuestionService {
   constructor(
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
+    @InjectRepository(Vote)
+    private readonly voteRepository: Repository<Vote>,
   ) {}
 
   async createQuestion(
@@ -83,7 +92,7 @@ export class QuestionService {
     return result;
   }
 
-  async getQuestionById(id: number) {
+  async getQuestionById(id: number, user?) {
     const question = await this.questionRepository.findOne({
       where: {
         questionId: id,
@@ -91,9 +100,42 @@ export class QuestionService {
       relations: ['user', 'answers', 'answers.user'],
     });
 
-    let answers = [];
+    let questionVote = null;
+    let answerVotes = [];
+    if (user) {
+      questionVote = await this.voteRepository.findOne({
+        where: {
+          question: { questionId: id },
+          voteType: VoteTypeEnum.APPROVE,
+          user,
+        },
+      });
+
+      answerVotes = await Promise.all(
+        question.answers.map(async (answer) => {
+          const approveVote = await this.voteRepository.findOne({
+            where: {
+              answer: { answerId: answer.answerId },
+              voteType: VoteTypeEnum.APPROVE,
+              user,
+            },
+          });
+
+          return {
+            answerId: answer.answerId,
+            approveVoted: approveVote ? true : false,
+          };
+        }),
+      );
+    }
+
+    let answers: AnswerDto[] = [];
     if (question.answers.length) {
       answers = question.answers.map((answer) => {
+        const answerVote = answerVotes.find(
+          (av) => av.answerId === answer.answerId,
+        );
+
         return {
           answerId: answer.answerId,
           content: answer.body,
@@ -101,15 +143,17 @@ export class QuestionService {
           userNickname: answer.user.nickname,
           userLevel: answer.user.level,
           userProfile: answer.user.profilePicture,
+          approveVoted: answerVote ? answerVote.approveVoted : false,
           date: moment(answer.createdAt).format('YYYY-DD-MM'),
         };
       });
     }
 
-    const result = {
+    return {
       questionId: question.questionId,
       title: question.title,
       content: question.body,
+      approveVoted: questionVote ? true : false,
       userNickname: question.user.nickname,
       userLevel: question.user.level,
       userProfile: question.user.profilePicture,
@@ -117,8 +161,6 @@ export class QuestionService {
       date: moment(question.createdAt).format('YYYY-DD-MM'),
       answers,
     };
-
-    return result;
   }
 
   async updateQuestion(

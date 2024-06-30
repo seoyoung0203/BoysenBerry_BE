@@ -20,6 +20,7 @@ import {
 } from './dto/question.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Question, User } from '../database/entities';
+import { OptionalAuthGuard } from 'src/auth/optional-auth.guard';
 
 @Controller('questions')
 export class QuestionController {
@@ -53,8 +54,13 @@ export class QuestionController {
 
   // 질문 상세 조회 API
   @Get(':id')
-  async getQuestionById(@Param('id') id: number): Promise<QuestionDetailDto> {
-    return this.questionService.getQuestionById(id);
+  @UseGuards(OptionalAuthGuard)
+  async getQuestionById(
+    @Param('id') id: number,
+    @Req() req,
+  ): Promise<QuestionDetailDto> {
+    const user: User = req.user;
+    return this.questionService.getQuestionById(id, user);
   }
 
   @Put(':id')
