@@ -3,15 +3,15 @@ import {
   Post,
   Body,
   Req,
-  UnauthorizedException,
   Res,
   Get,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
+import { LoginUserBodyDto } from './dto/login-user.dto';
 import { User } from '../database/entities';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
@@ -31,8 +31,8 @@ export class AuthController {
 
   // 로그인
   @Post('login')
-  async login(@Body() loginUserDto: LoginUserDto, @Res() res: Response) {
-    const { accessToken, refreshToken } =
+  async login(@Body() loginUserDto: LoginUserBodyDto, @Res() res: Response) {
+    const { accessToken, refreshToken, user } =
       await this.authService.login(loginUserDto);
 
     res.cookie('refreshToken', refreshToken, {
@@ -43,14 +43,26 @@ export class AuthController {
       maxAge: 1 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.json({ accessToken });
+    res.json({ accessToken, user: {} });
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard('jwt'))
+  async logout(@Res() res: Response): Promise<void> {
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      sameSite: 'strict',
+    });
+    res.status(200).send({ message: 'Logged out successfully' });
   }
 
   @Post('refresh')
   async refresh(@Req() req: Request) {
     const refreshToken = req.cookies.refreshToken;
+
     if (!refreshToken) {
-      throw new UnauthorizedException('No refresh token provided');
+      throw new BadRequestException('No refresh token provided');
     }
 
     return this.authService.refreshToken(refreshToken);

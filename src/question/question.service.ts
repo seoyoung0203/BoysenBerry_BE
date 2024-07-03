@@ -56,8 +56,8 @@ export class QuestionService {
 
   async getQuestions(sortBy: string, page: number = 1, limit: number = 10) {
     let order = {};
-    if (sortBy === 'answers') {
-      order = { answers: 'DESC' };
+    if (sortBy === 'popular') {
+      order = { approveCount: 'ASC' };
     } else if (sortBy === 'latest') {
       order = { createdAt: 'DESC' };
     }
@@ -65,7 +65,14 @@ export class QuestionService {
     const skipAmount = (page - 1) * limit;
 
     const questions = await this.questionRepository.find({
-      select: { questionId: true, title: true, body: true, createdAt: true },
+      select: {
+        questionId: true,
+        title: true,
+        body: true,
+        approveCount: true,
+        rejectCount: true,
+        createdAt: true,
+      },
       relations: ['user'],
       where: {
         status: QuestionStatus.PUBLISHED,
@@ -82,10 +89,12 @@ export class QuestionService {
         id: question.questionId,
         title: question.title,
         content: question.body.slice(0, LIST_CONTEXT_LENGTH),
+        userId: question.user.userId,
         userNickname: question.user.nickname,
         userProfile: question.user.profilePicture,
         userLevel: question.user.level,
-        date: moment(question.createdAt).format('YYYY-DD-MM'),
+        voteCount: question.approveCount - question.rejectCount,
+        date: moment(question.createdAt).format('YYYY-MM-DD'),
       };
     });
 
@@ -140,11 +149,12 @@ export class QuestionService {
           answerId: answer.answerId,
           content: answer.body,
           voteCount: answer.approveCount - answer.rejectCount || 0,
+          userId: answer.user.userId,
           userNickname: answer.user.nickname,
           userLevel: answer.user.level,
           userProfile: answer.user.profilePicture,
           approveVoted: answerVote ? answerVote.approveVoted : false,
-          date: moment(answer.createdAt).format('YYYY-DD-MM'),
+          date: moment(answer.createdAt).format('YYYY-MM-DD'),
         };
       });
     }
@@ -154,6 +164,7 @@ export class QuestionService {
       title: question.title,
       content: question.body,
       approveVoted: questionVote ? true : false,
+      userId: question.user.userId,
       userNickname: question.user.nickname,
       userLevel: question.user.level,
       userProfile: question.user.profilePicture,

@@ -7,6 +7,9 @@ import { AuthModule } from './auth/auth.module';
 import { QuestionModule } from './question/question.module';
 import { AnswerModule } from './answer/answer.module';
 import { VoteModule } from './vote/vote.module';
+import { NoticeService } from './notice/notice.service';
+import { NoticeController } from './notice/notice.controller';
+import { NoticeModule } from './notice/notice.module';
 
 @Module({
   imports: [
@@ -18,8 +21,9 @@ import { VoteModule } from './vote/vote.module';
     QuestionModule,
     AnswerModule,
     VoteModule,
+    NoticeModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, NoticeController],
+  providers: [AppService, NoticeService],
 })
 export class AppModule {}

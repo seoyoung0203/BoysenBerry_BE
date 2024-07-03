@@ -6,14 +6,14 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
+  Answer,
+  User,
+  Question,
   ContentType,
   Vote,
   VoteTypeEnum,
-} from '../database/entities/vote.entity';
-import { Question } from '../database/entities/question.entity';
-import { User } from '../database/entities/user.entity';
+} from '../database/entities/';
 import { VoteBodyDto } from './dto/vote.dto';
-import { Answer } from 'src/database/entities';
 
 @Injectable()
 export class VoteService {
@@ -26,24 +26,50 @@ export class VoteService {
     private readonly answerRepository: Repository<Answer>,
   ) {}
 
-  async modifyVote(user, question, voteDto, contentType) {
+  async modifyVote(user, content, voteDto, contentType: ContentType) {
+    let where = {};
+    if (contentType === ContentType.QUESTION) {
+      where = {
+        user: { userId: user.userId },
+        question: content,
+        voteType: voteDto.voteType,
+        contentType,
+      };
+    }
+
+    if (contentType === ContentType.ANSWER) {
+      where = {
+        user: { userId: user.userId },
+        answer: content,
+        voteType: voteDto.voteType,
+        contentType,
+      };
+    }
     let vote = await this.voteRepository.findOne({
-      where: { user, question, voteType: voteDto.voteType, contentType },
+      where,
     });
 
-    if (voteDto.value) {
+    if (voteDto.value === 1) {
       if (vote) {
         if (vote.voteType === voteDto.voteType) {
           throw new BadRequestException('You have already voted');
         }
       }
 
-      vote = this.voteRepository.create({
-        user,
-        question,
-      });
+      const createdVote = new Vote();
+      createdVote.contentType = contentType;
+      if (contentType === ContentType.QUESTION) {
+        createdVote.question = content;
+      }
 
-      await this.voteRepository.save(vote);
+      if (contentType === ContentType.ANSWER) {
+        createdVote.answer = content;
+      }
+
+      createdVote.user = user;
+      createdVote.voteType = voteDto.voteType;
+
+      await this.voteRepository.save(createdVote);
     } else {
       if (vote) {
         await this.voteRepository.remove(vote);
@@ -61,11 +87,12 @@ export class VoteService {
         questionId,
       },
     });
+
     if (!question) {
       throw new NotFoundException(`Question with id ${questionId} not found`);
     }
 
-    await this.modifyVote(questionId, user, voteDto, ContentType.QUESTION);
+    await this.modifyVote(user, question, voteDto, ContentType.QUESTION);
 
     if (voteDto.voteType === VoteTypeEnum.APPROVE) {
       question.approveCount += voteDto.value;
@@ -90,7 +117,7 @@ export class VoteService {
       throw new NotFoundException(`Question with id ${answerId} not found`);
     }
 
-    await this.modifyVote(answerId, user, voteDto, ContentType.ANSWER);
+    await this.modifyVote(user, answer, voteDto, ContentType.ANSWER);
 
     if (voteDto.voteType === VoteTypeEnum.APPROVE) {
       answer.approveCount += voteDto.value;

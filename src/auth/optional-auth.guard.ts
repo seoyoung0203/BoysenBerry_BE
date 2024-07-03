@@ -6,7 +6,6 @@ export class OptionalAuthGuard extends AuthGuard('jwt') {
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     const authorization = request.headers.authorization;
-    console.log('authorization', authorization);
 
     if (authorization) {
       return super.canActivate(context);

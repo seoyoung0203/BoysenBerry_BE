@@ -27,10 +27,10 @@ export class Vote {
   @ManyToOne(() => Answer, (answer) => answer.votes, { nullable: true })
   answer: Answer;
 
-  @Column({ type: 'enum', enum: ContentType, nullable: true })
+  @Column({ type: 'enum', enum: ContentType })
   contentType: 'question' | 'answer';
 
-  @Column({ type: 'enum', enum: VoteTypeEnum, nullable: true })
+  @Column({ type: 'enum', enum: VoteTypeEnum })
   voteType: 'approve' | 'reject';
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

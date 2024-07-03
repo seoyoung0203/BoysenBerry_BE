@@ -5,9 +5,10 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
+import { LoginUserBodyDto } from './dto/login-user.dto';
 import { SocialLoginEnum, User } from '../database/entities';
 import axios, { AxiosResponse } from 'axios';
+import { UserProfileDto } from 'src/common/dto/user.dto';
 
 @Injectable()
 export class AuthService {
@@ -34,9 +35,11 @@ export class AuthService {
     return this.userRepository.save(user);
   }
 
-  async login(
-    loginUserDto: LoginUserDto,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async login(loginUserDto: LoginUserBodyDto): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: UserProfileDto;
+  }> {
     const { email, password } = loginUserDto;
     const user = await this.userRepository.findOne({ where: { email } });
 
@@ -51,7 +54,16 @@ export class AuthService {
       expiresIn: '7d',
     });
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        userId: user.userId,
+        userNickname: user.nickname,
+        userLevel: user.level,
+        userProfile: user.profilePicture,
+      },
+    };
   }
 
   async refreshToken(refreshToken: string) {
@@ -60,7 +72,20 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
       const newAccessToken = this.jwtService.sign({ email: payload.email });
-      return { accessToken: newAccessToken };
+
+      const user = await this.userRepository.findOne({
+        where: { userId: payload.userId },
+      });
+
+      return {
+        accessToken: newAccessToken,
+        user: {
+          userId: user.userId,
+          nickname: user.nickname,
+          level: user.level,
+          profilePicture: user.profilePicture,
+        },
+      };
     } catch (e) {
       throw new UnauthorizedException('Invalid refresh token');
     }
