@@ -7,9 +7,9 @@ import {
 } from 'typeorm';
 
 @Entity()
-export class Notice {
+export class Announcement {
   @PrimaryGeneratedColumn()
-  noticeId: number;
+  announcementId: number;
 
   @Column()
   title: string;
