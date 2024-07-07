@@ -16,7 +16,7 @@ export enum ContentType {
 @Entity()
 export class Vote {
   @PrimaryGeneratedColumn()
-  voteId: number;
+  id: number;
 
   @ManyToOne(() => User, (user) => user.votes)
   user: User;

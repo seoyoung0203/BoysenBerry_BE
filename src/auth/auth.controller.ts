@@ -7,11 +7,15 @@ import {
   Get,
   UseGuards,
   BadRequestException,
+  Put,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserBodyDto } from './dto/login-user.dto';
+import {
+  ChangePasswordDto,
+  CreateUserDto,
+  LoginUserBodyDto,
+} from './dto/auth.dto';
 import { User } from '../database/entities';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
@@ -43,7 +47,7 @@ export class AuthController {
       maxAge: 1 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.json({ accessToken, user: {} });
+    res.json({ accessToken, user });
   }
 
   @Post('logout')
@@ -83,5 +87,15 @@ export class AuthController {
     res.redirect(
       `${this.configService.get<string>('GITHUB_CALLBACK_URL')}?accessToken=${result.accessToken}`,
     );
+  }
+
+  @Put('change-password')
+  @UseGuards(AuthGuard('jwt'))
+  async changePassword(
+    @Req() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    const userId = req.user.userId;
+    return this.authService.changePassword(userId, changePasswordDto);
   }
 }

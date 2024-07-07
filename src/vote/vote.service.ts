@@ -84,7 +84,7 @@ export class VoteService {
   ): Promise<void> {
     const question = await this.questionRepository.findOne({
       where: {
-        questionId,
+        id: questionId,
       },
     });
 
@@ -110,7 +110,7 @@ export class VoteService {
   ): Promise<void> {
     const answer = await this.answerRepository.findOne({
       where: {
-        answerId,
+        id: answerId,
       },
     });
     if (!answer) {

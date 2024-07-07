@@ -66,14 +66,14 @@ export class QuestionService {
 
     const questions = await this.questionRepository.find({
       select: {
-        questionId: true,
+        id: true,
         title: true,
         body: true,
         approveCount: true,
         rejectCount: true,
         createdAt: true,
       },
-      relations: ['user'],
+      relations: ['user', 'user.level'],
       where: {
         status: QuestionStatus.PUBLISHED,
         isVisible: true,
@@ -86,13 +86,13 @@ export class QuestionService {
     const result = questions.map((question) => {
       const LIST_CONTEXT_LENGTH = 100;
       return {
-        id: question.questionId,
+        id: question.id,
         title: question.title,
         content: question.body.slice(0, LIST_CONTEXT_LENGTH),
-        userId: question.user.userId,
-        userNickname: question.user.nickname,
-        userProfile: question.user.profilePicture,
-        userLevel: question.user.level,
+        userId: question.user.id,
+        nickname: question.user.nickname,
+        profileImage: question.user.profilePicture,
+        level: question.user.level.level,
         voteCount: question.approveCount - question.rejectCount,
         date: moment(question.createdAt).format('YYYY-MM-DD'),
       };
@@ -101,12 +101,12 @@ export class QuestionService {
     return result;
   }
 
-  async getQuestionById(id: number, user?) {
+  async getQuestionById(questionId: number, user?) {
     const question = await this.questionRepository.findOne({
       where: {
-        questionId: id,
+        id: questionId,
       },
-      relations: ['user', 'answers', 'answers.user'],
+      relations: ['user', 'answers', 'answers.user', 'answers.user.level'],
     });
 
     let questionVote = null;
@@ -114,7 +114,7 @@ export class QuestionService {
     if (user) {
       questionVote = await this.voteRepository.findOne({
         where: {
-          question: { questionId: id },
+          question: { id: questionId },
           voteType: VoteTypeEnum.APPROVE,
           user,
         },
@@ -124,14 +124,14 @@ export class QuestionService {
         question.answers.map(async (answer) => {
           const approveVote = await this.voteRepository.findOne({
             where: {
-              answer: { answerId: answer.answerId },
+              answer: { id: answer.id },
               voteType: VoteTypeEnum.APPROVE,
               user,
             },
           });
 
           return {
-            answerId: answer.answerId,
+            answerId: answer.id,
             approveVoted: approveVote ? true : false,
           };
         }),
@@ -141,18 +141,16 @@ export class QuestionService {
     let answers: AnswerDto[] = [];
     if (question.answers.length) {
       answers = question.answers.map((answer) => {
-        const answerVote = answerVotes.find(
-          (av) => av.answerId === answer.answerId,
-        );
+        const answerVote = answerVotes.find((av) => av.answerId === answer.id);
 
         return {
-          answerId: answer.answerId,
+          answerId: answer.id,
           content: answer.body,
           voteCount: answer.approveCount - answer.rejectCount || 0,
-          userId: answer.user.userId,
-          userNickname: answer.user.nickname,
-          userLevel: answer.user.level,
-          userProfile: answer.user.profilePicture,
+          userId: answer.user.id,
+          nickname: answer.user.nickname,
+          level: answer.user.level.level,
+          profileImage: answer.user.profilePicture,
           approveVoted: answerVote ? answerVote.approveVoted : false,
           date: moment(answer.createdAt).format('YYYY-MM-DD'),
         };
@@ -160,14 +158,14 @@ export class QuestionService {
     }
 
     return {
-      questionId: question.questionId,
+      questionId: question.id,
       title: question.title,
       content: question.body,
       approveVoted: questionVote ? true : false,
-      userId: question.user.userId,
-      userNickname: question.user.nickname,
-      userLevel: question.user.level,
-      userProfile: question.user.profilePicture,
+      userId: question.user.id,
+      nickname: question.user.nickname,
+      level: question.user.level.level,
+      profileImage: question.user.profilePicture,
       voteCount: question.approveCount - question.rejectCount || 0,
       date: moment(question.createdAt).format('YYYY-DD-MM'),
       answers,
@@ -175,20 +173,20 @@ export class QuestionService {
   }
 
   async updateQuestion(
-    id: number,
+    questionId: number,
     updateQuestionDto: UpdateQuestionBodyDto,
     user: User,
   ): Promise<Question> {
     const question = await this.questionRepository.findOne({
-      where: { questionId: id },
+      where: { id: questionId },
       relations: ['user'],
     });
 
     if (!question) {
-      throw new NotFoundException(`Question with id ${id} not found`);
+      throw new NotFoundException(`Question with id ${questionId} not found`);
     }
 
-    if (question.user.userId !== user.userId) {
+    if (question.user.id !== user.id) {
       throw new NotFoundException(
         `You are not authorized to update this question`,
       );
@@ -205,17 +203,17 @@ export class QuestionService {
     return this.questionRepository.save(question);
   }
 
-  async deleteQuestion(id: number, user: User): Promise<void> {
+  async deleteQuestion(questionId: number, user: User): Promise<void> {
     const question = await this.questionRepository.findOne({
-      where: { questionId: id },
+      where: { id: questionId },
       relations: ['user'],
     });
 
     if (!question) {
-      throw new NotFoundException(`Question with id ${id} not found`);
+      throw new NotFoundException(`Question with id ${questionId} not found`);
     }
 
-    if (question.user.userId !== user.userId) {
+    if (question.user.id !== user.id) {
       throw new UnauthorizedException(
         `You are not authorized to delete this question`,
       );

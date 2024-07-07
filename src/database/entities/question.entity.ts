@@ -17,7 +17,7 @@ export enum QuestionStatus {
 @Entity()
 export class Question {
   @PrimaryGeneratedColumn()
-  questionId: number;
+  id: number;
 
   @ManyToOne(() => User, (user) => user.questions)
   user: User;

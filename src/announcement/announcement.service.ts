@@ -20,7 +20,7 @@ export class AnnouncementService {
 
     const announcements = await this.announcementRepository.find({
       select: {
-        announcementId: true,
+        id: true,
         title: true,
         content: true,
         createdAt: true,
@@ -33,7 +33,7 @@ export class AnnouncementService {
 
     return announcements.map((announcement) => {
       return {
-        announcementId: announcement.announcementId,
+        announcementId: announcement.id,
         title: announcement.title,
         content: announcement.content,
         date: moment(announcement.createdAt).format('YYYY-MM-DD'),

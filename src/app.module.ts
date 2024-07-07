@@ -8,6 +8,7 @@ import { QuestionModule } from './question/question.module';
 import { AnswerModule } from './answer/answer.module';
 import { VoteModule } from './vote/vote.module';
 import { AnnouncementModule } from './announcement/announcement.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AnnouncementModule } from './announcement/announcement.module';
     AnswerModule,
     VoteModule,
     AnnouncementModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],

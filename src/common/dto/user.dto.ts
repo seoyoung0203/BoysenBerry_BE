@@ -5,12 +5,16 @@ export class UserProfileDto {
   readonly userId: number;
 
   @IsString()
-  readonly userNickname: string;
+  readonly nickname: string;
 
   @IsNumber()
-  readonly userLevel: number;
+  readonly level: number;
 
   @IsUrl()
   @IsOptional()
-  readonly userProfile?: string;
+  readonly profileImage?: string;
+
+  @IsString()
+  @IsOptional()
+  readonly createdAt?: string;
 }

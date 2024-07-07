@@ -23,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const { sub: userId } = payload;
     return this.userRepository.findOne({
       where: {
-        userId,
+        id: userId,
       },
     });
   }

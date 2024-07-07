@@ -1,14 +1,24 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserBodyDto } from './dto/login-user.dto';
+import {
+  ChangePasswordDto,
+  CreateUserDto,
+  LoginUserBodyDto,
+} from './dto/auth.dto';
 import { SocialLoginEnum, User } from '../database/entities';
 import axios, { AxiosResponse } from 'axios';
 import { UserProfileDto } from 'src/common/dto/user.dto';
+import moment from 'moment';
 
 @Injectable()
 export class AuthService {
@@ -41,13 +51,23 @@ export class AuthService {
     user: UserProfileDto;
   }> {
     const { email, password } = loginUserDto;
-    const user = await this.userRepository.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({
+      select: {
+        id: true,
+        password: true,
+        nickname: true,
+        profilePicture: true,
+        createdAt: true,
+      },
+      relations: ['level'],
+      where: { email },
+    });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { email: user.email, sub: user.userId };
+    const payload = { email: user.email, sub: user.id };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
@@ -58,10 +78,11 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: {
-        userId: user.userId,
-        userNickname: user.nickname,
-        userLevel: user.level,
-        userProfile: user.profilePicture,
+        userId: user.id,
+        nickname: user.nickname,
+        level: user.level.level,
+        profileImage: user.profilePicture,
+        createdAt: moment(user.createdAt).format('YYYY-MM-DD'),
       },
     };
   }
@@ -74,20 +95,22 @@ export class AuthService {
       const newAccessToken = this.jwtService.sign({ email: payload.email });
 
       const user = await this.userRepository.findOne({
-        where: { userId: payload.userId },
+        relations: ['level'],
+        where: { id: payload.userId },
       });
 
       return {
         accessToken: newAccessToken,
         user: {
-          userId: user.userId,
+          userId: user.id,
           nickname: user.nickname,
-          level: user.level,
+          level: user.level.level,
           profilePicture: user.profilePicture,
+          createdAt: moment(user.createdAt).format('YYYY-MM-DD'),
         },
       };
     } catch (e) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new InternalServerErrorException('Invalid refresh token');
     }
   }
 
@@ -109,7 +132,7 @@ export class AuthService {
 
     const payload = {
       email: user.email,
-      sub: existingUser?.userId ?? user.email,
+      sub: existingUser?.id ?? user.email,
     };
     const accessToken = this.jwtService.sign(payload);
     return { accessToken };
@@ -163,14 +186,40 @@ export class AuthService {
         password: '',
       });
       const user = await this.userRepository.save(newUser);
-      userId = user.userId;
+      userId = user.id;
     }
 
     const payload = {
-      sub: existingUser?.userId ?? userId,
+      sub: existingUser?.id ?? userId,
     };
 
     const accessToken = this.jwtService.sign(payload);
     return { accessToken };
+  }
+
+  async changePassword(
+    userId: number,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    const user = await this.userRepository.findOne({
+      select: { id: true, password: true },
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+
+    const isMatch = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.password,
+    );
+
+    if (!isMatch) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    user.password = await bcrypt.hash(changePasswordDto.newPassword, 10);
+    await this.userRepository.save(user);
   }
 }

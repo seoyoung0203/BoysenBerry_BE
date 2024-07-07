@@ -12,7 +12,7 @@ import { Vote } from './vote.entity';
 @Entity()
 export class Answer {
   @PrimaryGeneratedColumn()
-  answerId: number;
+  id: number;
 
   @ManyToOne(() => Question, (question) => question.answers)
   question: Question;

@@ -26,7 +26,7 @@ export class AnswerService {
 
     const question = await this.questionRepository.findOne({
       where: {
-        questionId,
+        id: questionId,
       },
     });
     if (!question) {
@@ -47,7 +47,7 @@ export class AnswerService {
     user: User,
   ): Promise<Answer> {
     const answer = await this.answerRepository.findOne({
-      where: { answerId },
+      where: { id: answerId },
       relations: ['user'],
     });
 
@@ -55,7 +55,7 @@ export class AnswerService {
       throw new NotFoundException(`Answer with id ${answerId} not found`);
     }
 
-    if (answer.user.userId !== user.userId) {
+    if (answer.user.id !== user.id) {
       throw new UnauthorizedException(
         `You are not authorized to update this answer`,
       );
@@ -70,7 +70,7 @@ export class AnswerService {
 
   async deleteAnswer(answerId: number, user: User): Promise<void> {
     const answer = await this.answerRepository.findOne({
-      where: { answerId },
+      where: { id: answerId },
       relations: ['user'],
     });
 
@@ -78,7 +78,7 @@ export class AnswerService {
       throw new NotFoundException(`Answer with id ${answerId} not found`);
     }
 
-    if (answer.user.userId !== user.userId) {
+    if (answer.user.id !== user.id) {
       throw new UnauthorizedException(
         `You are not authorized to delete this answer`,
       );
