@@ -64,6 +64,11 @@ export class UserController {
     );
   }
 
+  @Get('rankings/top')
+  async getUserTopRanking() {
+    return this.userService.getUserTopRanking();
+  }
+
   @Put()
   @UseGuards(AuthGuard('jwt'))
   async updateUserProfile(

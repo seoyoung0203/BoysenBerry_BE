@@ -12,6 +12,9 @@ import { ContentType } from 'src/database/entities';
 
 export class UserRankDto {
   @IsNumber()
+  userId: number;
+
+  @IsNumber()
   rank: number;
 
   @IsString()

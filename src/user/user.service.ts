@@ -221,6 +221,26 @@ export class UserService {
     return userAnswers;
   }
 
+  async getUserTopRanking() {
+    const TOP_NUM = 3;
+    const users = await this.userRepository.find({
+      relations: ['level'],
+      order: { totalExperience: 'DESC' },
+      take: TOP_NUM,
+    });
+
+    return users.map((user, index) => {
+      return {
+        userId: user.id,
+        rank: index + 1,
+        nickname: user.nickname,
+        level: user.level.level,
+        profilePicture: user.profilePicture,
+        totalExperience: user.totalExperience,
+      };
+    });
+  }
+
   async getUserRankings(page: number, limit: number): Promise<UserRankDto[]> {
     const [users, total] = await this.userRepository.findAndCount({
       relations: ['level'],
@@ -236,6 +256,7 @@ export class UserService {
       );
 
       return {
+        userId: user.id,
         rank: (page - 1) * limit + index + 1,
         nickname: user.nickname,
         level: user.level.level,
