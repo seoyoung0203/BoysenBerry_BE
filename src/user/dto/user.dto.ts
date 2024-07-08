@@ -10,6 +10,29 @@ import {
 import { Type } from 'class-transformer';
 import { ContentType } from 'src/database/entities';
 
+export class UserRankDto {
+  @IsNumber()
+  rank: number;
+
+  @IsString()
+  nickname: string;
+
+  @IsNumber()
+  level: number;
+
+  @IsString()
+  levelName: string;
+
+  @IsString()
+  profilePicture: string;
+
+  @IsNumber()
+  totalExperience: number;
+
+  @IsNumber()
+  daysSinceJoined: number;
+}
+
 class TopContentDto {
   @IsNumber()
   contentId: number;
@@ -90,7 +113,13 @@ export class DashboardDto {
 
 export class UserQuestionDto {
   @IsNumber()
-  questionId: number;
+  id: number;
+
+  @IsNumber()
+  approveCount: number;
+
+  @IsNumber()
+  receivedAnswersCount: number;
 
   @IsString()
   title: string;
@@ -100,14 +129,23 @@ export class UserQuestionDto {
 
   @IsString()
   createdAt: string;
+
+  @IsString()
+  updatedAt: string;
 }
 
 export class UserAnswerDto {
   @IsNumber()
-  answerId: number;
+  id: number;
+
+  @IsNumber()
+  questionId: number;
 
   @IsString()
   body: string;
+
+  @IsNumber()
+  approveCount: number;
 
   @IsString()
   createdAt: string;

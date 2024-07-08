@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from 'src/database/entities';
 import { UserService } from './user.service';
@@ -7,7 +15,9 @@ import {
   DashboardDto,
   UserAnswerDto,
   UpdateUserProfileBodyDto,
+  UserRankDto,
 } from './dto/user.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 
 @Controller('users')
 export class UserController {
@@ -17,7 +27,6 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'))
   async getUserStats(@Req() req): Promise<DashboardDto> {
     const user: User = req.user;
-    console.log('TTTTTT');
     return this.userService.getDashboard(user.id);
   }
 
@@ -37,9 +46,22 @@ export class UserController {
 
   @Get('answers')
   @UseGuards(AuthGuard('jwt'))
-  async getUserAnswers(@Req() req): Promise<UserAnswerDto[]> {
+  async getUserAnswers(
+    @Req() req,
+    @Query() query: PaginationQueryDto,
+  ): Promise<UserAnswerDto[]> {
     const userId = req.user.id;
-    return this.userService.getUserAnswers(userId);
+    return this.userService.getUserAnswers(userId, query.limit, query.page);
+  }
+
+  @Get('rankings')
+  async getUserRankings(
+    @Query() paginationQuery: PaginationQueryDto,
+  ): Promise<UserRankDto[]> {
+    return this.userService.getUserRankings(
+      paginationQuery.page,
+      paginationQuery.limit,
+    );
   }
 
   @Put()

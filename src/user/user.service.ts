@@ -7,6 +7,7 @@ import {
   UserQuestionDto,
   DashboardDto,
   UpdateUserProfileBodyDto,
+  UserRankDto,
 } from './dto/user.dto';
 import { ContentType, VoteTypeEnum } from 'src/database/entities';
 import moment from 'moment';
@@ -167,39 +168,84 @@ export class UserService {
   async getUserQuestions(userId: number): Promise<UserQuestionDto[]> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['questions'],
+      relations: ['questions', 'questions.votes', 'questions.answers'],
     });
 
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const userQuestions: UserQuestionDto[] = user.questions.map((question) => ({
-      questionId: question.id,
-      title: question.title,
-      body: question.body,
-      createdAt: moment(question.createdAt).format('YYYY-MM-DD'),
-    }));
+    const userQuestions = user.questions.map((question) => {
+      const approveCount = question.votes.filter(
+        (vote) => vote.voteType === VoteTypeEnum.APPROVE,
+      ).length;
+      const receivedAnswersCount = question.answers.length;
+
+      return {
+        id: question.id,
+        approveCount,
+        receivedAnswersCount,
+        title: question.title,
+        body: question.body.slice(0, 100),
+        createdAt: question.createdAt.toISOString(),
+      } as UserQuestionDto;
+    });
 
     return userQuestions;
   }
 
-  async getUserAnswers(userId: number): Promise<UserAnswerDto[]> {
+  async getUserAnswers(userId: number, limit, page): Promise<UserAnswerDto[]> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['answers'],
+      relations: ['answers', 'answers.votes', 'answers.question'],
     });
 
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const userAnswers: UserAnswerDto[] = user.answers.map((answer) => ({
-      answerId: answer.id,
-      body: answer.body,
-      createdAt: moment(answer.createdAt).format('YYYY-MM-DD'),
-    }));
+    const userAnswers = user.answers.map((answer) => {
+      const approveCount = answer.votes.filter(
+        (vote) => vote.voteType === VoteTypeEnum.APPROVE,
+      ).length;
+
+      return {
+        id: answer.id,
+        questionId: answer.question.id,
+        body: answer.body.slice(0, 100),
+        approveCount,
+        createdAt: answer.createdAt.toISOString(),
+      } as UserAnswerDto;
+    });
 
     return userAnswers;
+  }
+
+  async getUserRankings(page: number, limit: number): Promise<UserRankDto[]> {
+    const [users, total] = await this.userRepository.findAndCount({
+      relations: ['level'],
+      order: { totalExperience: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const userRankings = users.map((user, index) => {
+      const daysSinceJoined = Math.floor(
+        (new Date().getTime() - new Date(user.createdAt).getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
+
+      return {
+        rank: (page - 1) * limit + index + 1,
+        nickname: user.nickname,
+        level: user.level.level,
+        levelName: user.level.name,
+        profilePicture: user.profilePicture,
+        totalExperience: user.totalExperience,
+        daysSinceJoined,
+      } as UserRankDto;
+    });
+
+    return userRankings;
   }
 }

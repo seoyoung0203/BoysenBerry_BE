@@ -7,6 +7,12 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
+export enum ExType {
+  QUESTION = 'question',
+  ANSWER = 'answer',
+  APPROVE_VOTE = 'approveVote',
+}
+
 @Entity()
 export class ExperienceHistory {
   @PrimaryGeneratedColumn()
@@ -15,8 +21,8 @@ export class ExperienceHistory {
   @Column()
   experienceChange: number;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
+  @Column({ type: 'enum', enum: ExType })
+  exType: ExType;
 
   @CreateDateColumn()
   createdAt: Date;

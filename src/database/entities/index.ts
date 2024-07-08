@@ -6,3 +6,4 @@ export * from './notification.entity';
 export * from './level.entity';
 export * from './vote.entity';
 export * from './announcement.entity';
+export * from './experience-history.entity';

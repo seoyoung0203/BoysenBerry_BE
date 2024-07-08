@@ -12,12 +12,14 @@ import {
   UpdateQuestionBodyDto,
 } from './dto/question.dto';
 import {
+  ExType,
   Question,
   QuestionStatus,
   User,
   Vote,
   VoteTypeEnum,
 } from '../database/entities';
+import { ExperienceHistoryService } from 'src/experience-history/experience-history.service';
 
 @Injectable()
 export class QuestionService {
@@ -26,6 +28,7 @@ export class QuestionService {
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(Vote)
     private readonly voteRepository: Repository<Vote>,
+    private readonly experienceHistoryService: ExperienceHistoryService,
   ) {}
 
   async createQuestion(
@@ -41,8 +44,12 @@ export class QuestionService {
     question.user = user;
 
     const savedQuestion = await this.questionRepository.save(question);
+    await this.experienceHistoryService.gainExperience(
+      user.id,
+      ExType.QUESTION,
+    );
 
-    return this.questionRepository.save(savedQuestion);
+    return savedQuestion;
   }
 
   async getQuestionTotalCount() {

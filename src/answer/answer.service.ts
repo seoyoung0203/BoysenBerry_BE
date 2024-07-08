@@ -6,8 +6,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateAnswerBodyDto, UpdateAnswerBodyDto } from './dto/answer.dto';
-import { Answer, Question } from '../database/entities';
+import { Answer, ExType, Question } from '../database/entities';
 import { User } from '../database/entities/user.entity';
+import { ExperienceHistoryService } from 'src/experience-history/experience-history.service';
 
 @Injectable()
 export class AnswerService {
@@ -16,6 +17,7 @@ export class AnswerService {
     private readonly answerRepository: Repository<Answer>,
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
+    private readonly experienceHistoryService: ExperienceHistoryService,
   ) {}
 
   async createAnswer(
@@ -38,7 +40,11 @@ export class AnswerService {
     answer.question = question;
     answer.user = user;
 
-    return this.answerRepository.save(answer);
+    const savedAnswer = await this.answerRepository.save(answer);
+
+    await this.experienceHistoryService.gainExperience(user.id, ExType.ANSWER);
+
+    return savedAnswer;
   }
 
   async updateAnswer(

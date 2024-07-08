@@ -12,8 +12,10 @@ import {
   ContentType,
   Vote,
   VoteTypeEnum,
+  ExType,
 } from '../database/entities/';
 import { VoteBodyDto } from './dto/vote.dto';
+import { ExperienceHistoryService } from 'src/experience-history/experience-history.service';
 
 @Injectable()
 export class VoteService {
@@ -24,9 +26,15 @@ export class VoteService {
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(Answer)
     private readonly answerRepository: Repository<Answer>,
+    private readonly experienceHistoryService: ExperienceHistoryService,
   ) {}
 
-  async modifyVote(user, content, voteDto, contentType: ContentType) {
+  async modifyVote(
+    user,
+    content: Question | Answer,
+    voteDto,
+    contentType: ContentType,
+  ) {
     let where = {};
     if (contentType === ContentType.QUESTION) {
       where = {
@@ -59,15 +67,21 @@ export class VoteService {
       const createdVote = new Vote();
       createdVote.contentType = contentType;
       if (contentType === ContentType.QUESTION) {
-        createdVote.question = content;
+        createdVote.question = content as Question;
       }
 
       if (contentType === ContentType.ANSWER) {
-        createdVote.answer = content;
+        createdVote.answer = content as Answer;
       }
 
       createdVote.user = user;
       createdVote.voteType = voteDto.voteType;
+
+      // xp 쌓기
+      await this.experienceHistoryService.gainExperience(
+        content.user.id,
+        ExType.APPROVE_VOTE,
+      );
 
       await this.voteRepository.save(createdVote);
     } else {
