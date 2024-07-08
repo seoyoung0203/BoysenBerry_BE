@@ -15,7 +15,7 @@ export class Announcement {
   title: string;
 
   @Column('text')
-  content: string;
+  body: string;
 
   @Column({ default: 0 })
   viewsCount: number;

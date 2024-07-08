@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Announcement } from '../database/entities';
@@ -12,6 +12,25 @@ export class AnnouncementService {
     private readonly announcementRepository: Repository<Announcement>,
   ) {}
 
+  async getAnnouncement(announcementId: number): Promise<AnnouncementDto> {
+    const announcement = await this.announcementRepository.findOne({
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        createdAt: true,
+      },
+      where: { isVisible: true, id: announcementId },
+    });
+
+    return {
+      id: announcement.id,
+      title: announcement.title,
+      body: announcement.body,
+      date: moment(announcement.createdAt).format('YYYY-MM-DD'),
+    };
+  }
+
   async getAnnouncements(
     page: number = 1,
     limit: number = 10,
@@ -22,7 +41,7 @@ export class AnnouncementService {
       select: {
         id: true,
         title: true,
-        content: true,
+        body: true,
         createdAt: true,
       },
       where: { isVisible: true },
@@ -33,9 +52,9 @@ export class AnnouncementService {
 
     return announcements.map((announcement) => {
       return {
-        announcementId: announcement.id,
+        id: announcement.id,
         title: announcement.title,
-        content: announcement.content,
+        body: announcement.body.slice(0, 100),
         date: moment(announcement.createdAt).format('YYYY-MM-DD'),
       };
     });
@@ -48,5 +67,20 @@ export class AnnouncementService {
       },
     });
     return announcementCount;
+  }
+
+  async incrementViewCount(announcementId: number): Promise<void> {
+    const announcement = await this.announcementRepository.findOne({
+      where: { id: announcementId },
+    });
+
+    if (!announcement) {
+      throw new NotFoundException(
+        `Announcement with id ${announcementId} not found`,
+      );
+    }
+
+    announcement.viewsCount += 1;
+    await this.announcementRepository.save(announcement);
   }
 }

@@ -5,13 +5,13 @@ export class GetAnnouncementQueryDto extends PaginationQueryDto {}
 
 export class AnnouncementDto {
   @IsNumber()
-  announcementId: number;
+  id: number;
 
   @IsString()
   title: string;
 
   @IsString()
-  content: string;
+  body: string;
 
   @IsDateString()
   date: string;

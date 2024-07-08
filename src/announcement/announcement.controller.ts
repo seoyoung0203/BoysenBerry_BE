@@ -1,4 +1,11 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AnnouncementService } from './announcement.service';
 import {
   AnnouncementDto,
@@ -8,6 +15,22 @@ import {
 @Controller('announcements')
 export class AnnouncementController {
   constructor(private readonly announcementService: AnnouncementService) {}
+
+  @Post(':id/views')
+  async incrementViewCount(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    return this.announcementService.incrementViewCount(id);
+  }
+
+  @Get(':id')
+  async find(
+    @Param('id') id: number,
+  ): Promise<{ announcement: AnnouncementDto }> {
+    const announcement = await this.announcementService.getAnnouncement(id);
+
+    return { announcement };
+  }
 
   @Get()
   async findAll(
