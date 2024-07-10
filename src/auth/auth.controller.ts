@@ -72,6 +72,35 @@ export class AuthController {
     return this.authService.refreshToken(refreshToken);
   }
 
+  @Post('send-reset-password-email')
+  async sendPasswordResetEmail(@Body('email') email: string): Promise<void> {
+    console.log('send Email');
+    return this.authService.sendPasswordResetEmail(email);
+  }
+
+  @Post('verify-reset-code')
+  async verifyResetCode(
+    @Body('email') email: string,
+    @Body('code') code: string,
+  ): Promise<{ success: boolean }> {
+    const result = await this.authService.verifyResetCode(email, code);
+    return { success: result };
+  }
+
+  @Put('reset-password')
+  async resetPassword(
+    @Body('email') email: string,
+    @Body('code') code: string,
+    @Body('newPassword') newPassword: string,
+  ): Promise<{ success: boolean }> {
+    const result = await this.authService.resetPassword(
+      email,
+      code,
+      newPassword,
+    );
+    return { success: result };
+  }
+
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {

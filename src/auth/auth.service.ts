@@ -15,10 +15,12 @@ import {
   CreateUserDto,
   LoginUserBodyDto,
 } from './dto/auth.dto';
-import { SocialLoginEnum, User } from '../database/entities';
+import { ResetPassword, SocialLoginEnum, User } from '../database/entities';
 import axios, { AxiosResponse } from 'axios';
 import { UserProfileDto } from 'src/common/dto/user.dto';
 import moment from 'moment';
+import { MailService } from 'src/mail/mail.service';
+import { generateRandomString } from 'src/common/utils/utils';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,9 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @InjectRepository(ResetPassword)
+    private readonly resetPasswordRepository: Repository<ResetPassword>,
+    private readonly mailService: MailService,
   ) {}
 
   async register(createUserDto: CreateUserDto): Promise<User> {
@@ -43,6 +48,35 @@ export class AuthService {
     });
 
     return this.userRepository.save(user);
+  }
+
+  async getRankOfUser(userId: number) {
+    const user = await this.userRepository.findOne({
+      select: {
+        id: true,
+        nickname: true,
+        profilePicture: true,
+        totalExperience: true,
+      },
+      relations: ['level'],
+      where: {
+        id: userId,
+      },
+    });
+
+    const totalUsers = await this.userRepository.find({
+      select: {
+        id: true,
+        nickname: true,
+        profilePicture: true,
+        totalExperience: true,
+      },
+      order: { totalExperience: 'DESC' },
+    });
+
+    const userRank = totalUsers.findIndex((u) => u.id === user.id) + 1;
+
+    return userRank;
   }
 
   async login(loginUserDto: LoginUserBodyDto): Promise<{
@@ -112,6 +146,80 @@ export class AuthService {
     } catch (e) {
       throw new InternalServerErrorException('Invalid refresh token');
     }
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User with this email does not exist');
+    }
+
+    const code = generateRandomString(5);
+    const resetPassword = this.resetPasswordRepository.create({ user, code });
+    await this.resetPasswordRepository.save(resetPassword);
+
+    const subject = '[BoysenBerry] 비밀번호 변경 인증 메일';
+    const text = `비밀번호 변경 인증 코드 ${code}`;
+
+    await this.mailService.sendMail(email, subject, text);
+  }
+
+  async verifyResetCode(email: string, code: string): Promise<boolean> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User with this email does not exist');
+    }
+
+    const resetPassword = await this.resetPasswordRepository.findOne({
+      where: { user, code },
+      order: { createdAt: 'DESC' },
+    });
+    if (!resetPassword) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    resetPassword.isVerified = true;
+    await this.resetPasswordRepository.save(resetPassword);
+
+    return true;
+  }
+
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('User with this email does not exist');
+    }
+
+    const resetPassword = await this.resetPasswordRepository.findOne({
+      where: { user, code, isVerified: true, isPasswordChanged: false },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!resetPassword) {
+      throw new BadRequestException('Invalid or expired reset code');
+    }
+
+    const now = new Date();
+    const createdAt = new Date(resetPassword.createdAt);
+    const diffInHours =
+      (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours > 3) {
+      throw new BadRequestException('Reset code has expired');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await this.userRepository.save(user);
+
+    resetPassword.isPasswordChanged = true;
+    await this.resetPasswordRepository.save(resetPassword);
+
+    return true;
   }
 
   async googleLogin(user: any): Promise<{ accessToken: string }> {
