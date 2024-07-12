@@ -9,11 +9,13 @@ import {
   Req,
   Put,
   Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { QuestionService } from './question.service';
 import {
   CreateQuestionBodyDto,
   GetQuestionsQueryDto,
+  GetSearchQuestionsQueryDto,
   QuestionDetailDto,
   QuestionListDto,
   UpdateQuestionBodyDto,
@@ -37,6 +39,13 @@ export class QuestionController {
     return this.questionService.createQuestion(createQuestionDto, user);
   }
 
+  @Post(':id/views')
+  async incrementViewCount(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    return this.questionService.incrementViewCount(id);
+  }
+
   // 질문 리스트 조회 API
   @Get()
   async getQuestions(
@@ -49,6 +58,23 @@ export class QuestionController {
       limit,
     );
     const count = await this.questionService.getQuestionTotalCount();
+    return { questions, count };
+  }
+
+  @Get('search')
+  async searchQuestions(
+    @Query() query: GetSearchQuestionsQueryDto,
+  ): Promise<{ questions: QuestionListDto[]; count: number }> {
+    const { searchText, sortBy, page, limit } = query;
+    const questions = await this.questionService.searchQuestions(
+      searchText,
+      sortBy,
+      page,
+      limit,
+    );
+
+    const count =
+      await this.questionService.getSearchQuestionTotalCount(searchText);
     return { questions, count };
   }
 
@@ -77,7 +103,7 @@ export class QuestionController {
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
   async deleteQuestion(@Param('id') id: number, @Req() req): Promise<void> {
-    const user: User = req.user;
-    return this.questionService.deleteQuestion(id, user);
+    const userId = req.user.id;
+    return this.questionService.deleteQuestion(id, userId);
   }
 }

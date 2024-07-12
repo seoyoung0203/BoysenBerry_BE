@@ -4,10 +4,9 @@ import {
   IsEnum,
   IsOptional,
   IsNumber,
-  IsInt,
-  Min,
   IsIn,
   IsArray,
+  IsBoolean,
 } from 'class-validator';
 import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 import { UserProfileDto } from 'src/common/dto/user.dto';
@@ -26,6 +25,17 @@ export class CreateQuestionBodyDto {
   status: 'draft' | 'published';
 }
 
+export class GetSearchQuestionsQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(['answers', 'latest'], {
+    message: 'sortBy must be either "answers" or "latest"',
+  })
+  sortBy?: string;
+
+  @IsString()
+  searchText: string;
+}
+
 export class GetQuestionsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['answers', 'latest'], {
@@ -42,21 +52,27 @@ export class QuestionListDto extends UserProfileDto {
   readonly title: string;
 
   @IsString()
-  readonly content: string;
+  readonly body: string;
 
   @IsString()
-  readonly date: string;
+  readonly lastUpdated: string;
 }
 
 export class AnswerDto extends UserProfileDto {
   @IsNumber()
-  readonly answerId: number;
+  readonly id: number;
+
+  @IsNumber()
+  readonly userId: number;
 
   @IsString()
-  readonly content: string;
+  readonly body: string;
+
+  @IsBoolean()
+  readonly isEdited: boolean;
 
   @IsString()
-  readonly date: string;
+  readonly lastUpdated: string;
 }
 
 export class QuestionDetailDto extends UserProfileDto {
@@ -67,10 +83,13 @@ export class QuestionDetailDto extends UserProfileDto {
   readonly title: string;
 
   @IsString()
-  readonly content: string;
+  readonly body: string;
+
+  @IsBoolean()
+  readonly isEdited: boolean;
 
   @IsString()
-  readonly date: string;
+  readonly lastUpdated: string;
 
   @IsArray()
   readonly answers: AnswerDto[];
@@ -85,8 +104,8 @@ export class UpdateQuestionBodyDto {
   @IsOptional()
   readonly body?: string;
 
-  @IsArray()
-  @IsOptional()
-  @IsString({ each: true })
-  readonly tags?: string[];
+  // @IsArray()
+  // @IsOptional()
+  // @IsString({ each: true })
+  // readonly tags?: string[];
 }

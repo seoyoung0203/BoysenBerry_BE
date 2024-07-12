@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import moment from 'moment';
 import {
   AnswerDto,
@@ -61,12 +61,70 @@ export class QuestionService {
     return QuestionCount;
   }
 
+  async getSearchQuestionTotalCount(searchText: string): Promise<number> {
+    const searchQuery = this.questionRepository
+      .createQueryBuilder('question')
+      .where('question.title LIKE :query', { query: `%${searchText}%` })
+      .orWhere('question.body LIKE :query', { query: `%${searchText}%` });
+
+    return searchQuery.getCount();
+  }
+
+  async searchQuestions(
+    searchText: string,
+    sort: string,
+    page: number,
+    limit: number,
+  ) {
+    const whereCondition = [
+      { title: Like(`%${searchText}%`) },
+      { body: Like(`%${searchText}%`) },
+    ];
+
+    const orderCondition = {};
+    if (sort === 'popular') {
+      orderCondition['approveCount'] = 'ASC';
+    } else if (sort === 'latest') {
+      orderCondition['updatedAt'] = 'ASC';
+    }
+
+    const questions = await this.questionRepository.find({
+      select: [
+        'id',
+        'title',
+        'body',
+        'updatedAt',
+        'approveCount',
+        'rejectCount',
+      ],
+      relations: ['user', 'user.level'],
+      where: whereCondition,
+      order: orderCondition,
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return questions.map((question) => {
+      return {
+        id: question.id,
+        title: question.title,
+        body: question.body,
+        userId: question.user.id,
+        nickname: question.user.nickname,
+        profileImage: question.user.profilePicture,
+        level: question.user.level.level,
+        voteCount: question.approveCount - question.rejectCount,
+        lastUpdated: moment(question.updatedAt).format('YYYY-MM-DD'),
+      };
+    });
+  }
+
   async getQuestions(sortBy: string, page: number = 1, limit: number = 10) {
     let order = {};
     if (sortBy === 'popular') {
       order = { approveCount: 'ASC' };
     } else if (sortBy === 'latest') {
-      order = { createdAt: 'DESC' };
+      order = { updatedAt: 'DESC' };
     }
 
     const skipAmount = (page - 1) * limit;
@@ -78,7 +136,7 @@ export class QuestionService {
         body: true,
         approveCount: true,
         rejectCount: true,
-        createdAt: true,
+        updatedAt: true,
       },
       relations: ['user', 'user.level'],
       where: {
@@ -91,17 +149,16 @@ export class QuestionService {
     });
 
     const result = questions.map((question) => {
-      const LIST_CONTEXT_LENGTH = 100;
       return {
         id: question.id,
         title: question.title,
-        content: question.body.slice(0, LIST_CONTEXT_LENGTH),
+        body: question.body,
         userId: question.user.id,
         nickname: question.user.nickname,
         profileImage: question.user.profilePicture,
         level: question.user.level.level,
         voteCount: question.approveCount - question.rejectCount,
-        date: moment(question.createdAt).format('YYYY-MM-DD'),
+        lastUpdated: moment(question.updatedAt).format('YYYY-MM-DD'),
       };
     });
 
@@ -113,7 +170,13 @@ export class QuestionService {
       where: {
         id: questionId,
       },
-      relations: ['user', 'answers', 'answers.user', 'answers.user.level'],
+      relations: [
+        'user',
+        'user.level',
+        'answers',
+        'answers.user',
+        'answers.user.level',
+      ],
     });
 
     let questionVote = null;
@@ -149,32 +212,40 @@ export class QuestionService {
     if (question.answers.length) {
       answers = question.answers.map((answer) => {
         const answerVote = answerVotes.find((av) => av.answerId === answer.id);
-
+        const isEdited = !moment(answer.createdAt).isSame(
+          moment(answer.updatedAt),
+        );
         return {
-          answerId: answer.id,
-          content: answer.body,
+          id: answer.id,
+          body: answer.body,
           voteCount: answer.approveCount - answer.rejectCount || 0,
           userId: answer.user.id,
           nickname: answer.user.nickname,
           level: answer.user.level.level,
           profileImage: answer.user.profilePicture,
           approveVoted: answerVote ? answerVote.approveVoted : false,
-          date: moment(answer.createdAt).format('YYYY-MM-DD'),
+          isEdited,
+          lastUpdated: moment(answer.updatedAt).format('YYYY-MM-DD'),
         };
       });
     }
 
+    const isEdited = !moment(question.createdAt).isSame(
+      moment(question.updatedAt),
+    );
+
     return {
       questionId: question.id,
       title: question.title,
-      content: question.body,
+      body: question.body,
       approveVoted: questionVote ? true : false,
       userId: question.user.id,
       nickname: question.user.nickname,
       level: question.user.level.level,
       profileImage: question.user.profilePicture,
       voteCount: question.approveCount - question.rejectCount || 0,
-      date: moment(question.createdAt).format('YYYY-DD-MM'),
+      isEdited,
+      lastUpdated: moment(question.updatedAt).format('YYYY-DD-MM'),
       answers,
     };
   }
@@ -226,6 +297,23 @@ export class QuestionService {
       );
     }
 
+    await this.experienceHistoryService.loseExperience(
+      question.user.id,
+      ExType.QUESTION,
+    );
+
     await this.questionRepository.remove(question);
+  }
+
+  async incrementViewCount(questionId: number): Promise<void> {
+    const question = await this.questionRepository.findOne({
+      where: { id: questionId },
+    });
+    if (!question) {
+      throw new NotFoundException(`Question with id ${questionId} not found`);
+    }
+
+    question.viewsCount += 1;
+    await this.questionRepository.save(question);
   }
 }
