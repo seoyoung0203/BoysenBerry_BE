@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ExperienceHistoryService } from './experience-history.service';
-import { ExperienceHistory } from 'src/database/entities';
+import { ExperienceHistory, User } from 'src/database/entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ExperienceHistory])],
+  imports: [TypeOrmModule.forFeature([ExperienceHistory, User])],
   providers: [ExperienceHistoryService],
   exports: [ExperienceHistoryService],
 })
