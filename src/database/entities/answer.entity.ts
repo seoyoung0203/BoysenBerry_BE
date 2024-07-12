@@ -8,6 +8,7 @@ import {
 import { User } from './user.entity';
 import { Question } from './question.entity';
 import { Vote } from './vote.entity';
+import { Notification } from './notification.entity';
 
 @Entity()
 export class Answer {
@@ -47,4 +48,7 @@ export class Answer {
 
   @OneToMany(() => Vote, (vote) => vote.answer)
   votes: Vote[];
+
+  @OneToMany(() => Notification, (notification) => notification.question)
+  notifications: Notification[];
 }

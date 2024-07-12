@@ -9,6 +9,7 @@ import { CreateAnswerBodyDto, UpdateAnswerBodyDto } from './dto/answer.dto';
 import { Answer, ExType, Question } from '../database/entities';
 import { User } from '../database/entities/user.entity';
 import { ExperienceHistoryService } from 'src/experience-history/experience-history.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class AnswerService {
@@ -18,6 +19,7 @@ export class AnswerService {
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
     private readonly experienceHistoryService: ExperienceHistoryService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createAnswer(
@@ -42,7 +44,15 @@ export class AnswerService {
 
     const savedAnswer = await this.answerRepository.save(answer);
 
+    // xp 추가
     await this.experienceHistoryService.gainExperience(user.id, ExType.ANSWER);
+
+    // 동기처리 TODO. 메세지 다시 생각하기 - 알림
+    this.notificationService.createNotificationForQuestion(
+      user,
+      question,
+      '질문에 새로운 답변이 달렸습니다.',
+    );
 
     return savedAnswer;
   }
@@ -89,6 +99,11 @@ export class AnswerService {
         `You are not authorized to delete this answer`,
       );
     }
+
+    await this.experienceHistoryService.loseExperience(
+      answer.user.id,
+      ExType.ANSWER,
+    );
 
     await this.answerRepository.remove(answer);
   }

@@ -1,5 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
 import { User } from './user.entity';
+import { Question } from './question.entity';
+import { Answer } from './answer.entity';
 
 @Entity()
 export class Notification {
@@ -9,15 +17,20 @@ export class Notification {
   @ManyToOne(() => User, (user) => user.notifications)
   user: User;
 
-  @Column()
-  type: string;
+  @ManyToOne(() => Question, (question) => question.notifications, {
+    nullable: true,
+  })
+  question: Question;
 
-  @Column('text')
+  @ManyToOne(() => Answer, (answer) => answer.notifications, { nullable: true })
+  answer: Answer;
+
+  @Column()
   message: string;
 
   @Column({ default: false })
   isRead: boolean;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn()
   createdAt: Date;
 }

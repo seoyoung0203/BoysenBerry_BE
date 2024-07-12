@@ -16,6 +16,7 @@ import {
 } from '../database/entities/';
 import { VoteBodyDto } from './dto/vote.dto';
 import { ExperienceHistoryService } from 'src/experience-history/experience-history.service';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class VoteService {
@@ -27,10 +28,11 @@ export class VoteService {
     @InjectRepository(Answer)
     private readonly answerRepository: Repository<Answer>,
     private readonly experienceHistoryService: ExperienceHistoryService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async modifyVote(
-    user,
+    user: User,
     content: Question | Answer,
     voteDto,
     contentType: ContentType,
@@ -38,7 +40,7 @@ export class VoteService {
     let where = {};
     if (contentType === ContentType.QUESTION) {
       where = {
-        user: { userId: user.userId },
+        user: { id: user.id },
         question: content,
         voteType: voteDto.voteType,
         contentType,
@@ -47,7 +49,7 @@ export class VoteService {
 
     if (contentType === ContentType.ANSWER) {
       where = {
-        user: { userId: user.userId },
+        user: { id: user.id },
         answer: content,
         voteType: voteDto.voteType,
         contentType,
@@ -83,9 +85,29 @@ export class VoteService {
         ExType.APPROVE_VOTE,
       );
 
+      if (contentType === ContentType.ANSWER)
+        await this.notificationService.createNotificationForAnswer(
+          user,
+          content as Answer,
+          '작성한 답변에 투표를 얻었습니다.',
+        );
+
+      if (contentType === ContentType.QUESTION)
+        await this.notificationService.createNotificationForQuestion(
+          user,
+          content as Question,
+          '작성한 질문에 투표를 얻었습니다.',
+        );
+
       await this.voteRepository.save(createdVote);
     } else {
       if (vote) {
+        // xp 취소
+        await this.experienceHistoryService.loseExperience(
+          content.user.id,
+          ExType.APPROVE_VOTE,
+        );
+
         await this.voteRepository.remove(vote);
       }
     }
@@ -100,6 +122,7 @@ export class VoteService {
       where: {
         id: questionId,
       },
+      relations: ['user'],
     });
 
     if (!question) {
@@ -126,6 +149,7 @@ export class VoteService {
       where: {
         id: answerId,
       },
+      relations: ['user'],
     });
     if (!answer) {
       throw new NotFoundException(`Question with id ${answerId} not found`);

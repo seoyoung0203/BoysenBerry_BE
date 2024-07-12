@@ -8,6 +8,7 @@ import {
 import { User } from './user.entity';
 import { Answer } from './answer.entity';
 import { Vote } from './vote.entity';
+import { Notification } from './notification.entity';
 
 export enum QuestionStatus {
   DRAFT = 'draft',
@@ -58,4 +59,7 @@ export class Question {
 
   @OneToMany(() => Vote, (vote) => vote.question)
   votes: Vote[];
+
+  @OneToMany(() => Notification, (notification) => notification.question)
+  notifications: Notification[];
 }
