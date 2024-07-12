@@ -223,7 +223,14 @@ export class UserService {
 
   async getUserTopRanking() {
     const TOP_NUM = 3;
+
     const users = await this.userRepository.find({
+      select: {
+        id: true,
+        nickname: true,
+        profilePicture: true,
+        totalExperience: true,
+      },
       relations: ['level'],
       order: { totalExperience: 'DESC' },
       take: TOP_NUM,
@@ -243,6 +250,12 @@ export class UserService {
 
   async getUserRankings(page: number, limit: number): Promise<UserRankDto[]> {
     const [users, total] = await this.userRepository.findAndCount({
+      select: {
+        id: true,
+        profilePicture: true,
+        totalExperience: true,
+        createdAt: true,
+      },
       relations: ['level'],
       order: { totalExperience: 'DESC' },
       skip: (page - 1) * limit,
